@@ -3,9 +3,15 @@
   "buildCommand": "npm install",
   "devCommand": "npm run dev",
   "env": {
-    "MONGODB_URI": "@mongodb_uri",
-    "JWT_SECRET": "@jwt_secret",
-    "NODE_ENV": "production"
+    "MONGODB_URI": {
+      "value": "mongodb+srv://ojvwebdesign_db_user:Daniel2025@cluster0.kkcsogw.mongodb.net/?appName=Cluster0"
+    },
+    "JWT_SECRET": {
+      "value": "0e70c8b884f63fc2c4605cf30f177b7d7f2b877736d88b25e2db1d5aed0b7ad2"
+    },
+    "NODE_ENV": {
+      "value": "production"
+    }
   },
   "rewrites": [
     {
