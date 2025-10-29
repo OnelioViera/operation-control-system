@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lindsay Precast - Operations Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #a8b8a8;
+            padding: 10px;
+            font-size: 12px;
+        }
+
+        .header {
+            border: 1px solid #4a5a4a;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            letter-spacing: 2px;
+        }
+
+        .system-info {
+            text-align: right;
+            font-size: 10px;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 0px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        /* Panel resize handle - positioned between panels */
+        .panel-resize-handle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 10px;
+            margin-left: -5px;
+            cursor: col-resize;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            transition: background 0.2s;
+        }
+
+        .panel-resize-handle:hover {
+            background: rgba(107, 155, 107, 0.4);
+        }
+
+        .panel-resize-handle::before {
+            content: '⋮';
+            color: #6b9b6b;
+            font-size: 20px;
+            line-height: 0.8;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            text-shadow: 0 0 2px #000;
+        }
+
+        .panel-resize-handle::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 100%;
+            background: #4a5a4a;
+        }
+
+        .panel-resize-handle:hover::after {
+            background: #6b9b6b;
+            width: 3px;
+        }
+
+        .panel {
+            border: 1px solid #4a5a4a;
+            padding: 10px;
+            margin: 0 5px;
+        }
+        
+        .panel:first-child {
+            margin-left: 0;
+        }
+        
+        .panel:last-child {
+            margin-right: 0;
+        }
+
+        .panel-header {
+            background: #4a5a4a;
+            color: #1a1a1a;
+            padding: 5px;
+            margin: -10px -10px 10px -10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        th {
+            background: #252525;
+            border: 1px solid #4a5a4a;
+            padding: 5px;
+            text-align: left;
+            font-weight: bold;
+            position: relative;
+        }
+
+        td {
+            border: 1px solid #333;
+            padding: 5px;
+        }
+
+        tr:hover {
+            background: #252525;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            margin-right: 5px;
+        }
+
+        .status-green { background: #6b9b6b; }
+        .status-yellow { background: #b8a557; }
+        .status-red { background: #b85757; }
+        .status-gray { background: #666; }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .metric {
+            border: 1px solid #333;
+            padding: 8px;
+            background: #1f1f1f;
+        }
+
+        .metric-label {
+            font-size: 10px;
+            color: #7a8a7a;
+            margin-bottom: 3px;
+        }
+
+        .metric-value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .alert {
+            background: #2a1a1a;
+            border: 1px solid #b85757;
+            padding: 8px;
+            margin-bottom: 10px;
+            color: #d88888;
+        }
+
+        .workflow-bar {
+            display: flex;
+            height: 20px;
+            border: 1px solid #333;
+            margin-bottom: 5px;
+        }
+
+        .workflow-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            border-right: 1px solid #1a1a1a;
+        }
+
+        .workflow-creation { background: #3a4a3a; }
+        .workflow-engineering { background: #445544; }
+        .workflow-production { background: #4e604e; }
+        .workflow-delivery { background: #586b58; }
+        .workflow-complete { background: #627662; }
+
+        .command-line {
+            background: #0f0f0f;
+            border: 1px solid #4a5a4a;
+            padding: 10px;
+            padding-top: 20px;
+            margin-top: 10px;
+            font-size: 11px;
+            position: relative;
+            min-height: 150px;
+            height: 200px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .command-prompt {
+            color: #7a8a7a;
+        }
+
+        /* Terminal resize handle */
+        .terminal-resize-handle {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 15px;
+            cursor: ns-resize;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .terminal-resize-handle:hover {
+            background: rgba(107, 155, 107, 0.3);
+        }
+
+        .terminal-resize-handle::before {
+            content: '⋯';
+            color: #4a5a4a;
+            font-size: 20px;
+            letter-spacing: 3px;
+        }
+
+        .terminal-resize-handle::after {
+            content: '';
+            position: absolute;
+            top: 7px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 2px;
+            background: #4a5a4a;
+        }
+
+        #terminal-output {
+            margin-bottom: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* Side Panel Styles */
+        .side-panel {
+            position: fixed;
+            top: 0;
+            right: -500px;
+            width: 500px;
+            height: 100%;
+            background: #0f0f0f;
+            border-left: 2px solid #4a5a4a;
+            z-index: 1000;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .side-panel.open {
+            right: 0;
+        }
+
+        .side-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #4a5a4a;
+        }
+
+        .side-panel-title {
+            font-size: 16px;
+            color: #6b9b6b;
+            font-weight: bold;
+        }
+
+        .side-panel-close {
+            cursor: pointer;
+            font-size: 20px;
+            color: #a8b8a8;
+            background: none;
+            border: none;
+            padding: 5px 10px;
+        }
+
+        .side-panel-close:hover {
+            color: #6b9b6b;
+        }
+
+        .side-panel-section {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #333;
+            background: #1a1a1a;
+        }
+
+        .side-panel-section-title {
+            color: #7a8a7a;
+            font-size: 11px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .side-panel-data {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 8px;
+            font-size: 11px;
+        }
+
+        .side-panel-label {
+            color: #7a8a7a;
+        }
+
+        .side-panel-value {
+            color: #a8b8a8;
+        }
+
+        .side-panel-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .side-panel-button {
+            background: #4a5a4a;
+            color: #1a1a1a;
+            border: none;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            flex: 1;
+        }
+
+        .side-panel-button:hover {
+            background: #6b9b6b;
+        }
+
+        .side-panel-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+        }
+
+        .side-panel-overlay.active {
+            display: block;
+        }
+
+        .job-link {
+            cursor: pointer;
+            color: #7a9a7a;
+            text-decoration: none;
+        }
+
+        .job-link:hover {
+            text-decoration: underline;
+            color: #6b9b6b;
+        }
+
+        /* Login Screen Styles */
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .login-container {
+            width: 400px;
+            border: 2px solid #4a5a4a;
+            background: #1a1a1a;
+            padding: 30px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #4a5a4a;
+        }
+
+        .login-header h2 {
+            font-size: 24px;
+            letter-spacing: 3px;
+            color: #a8b8a8;
+            margin-bottom: 5px;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .login-field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .login-field label {
+            font-size: 11px;
+            color: #7a8a7a;
+            text-transform: uppercase;
+        }
+
+        .login-input {
+            background: #0f0f0f;
+            border: 1px solid #4a5a4a;
+            color: #a8b8a8;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            outline: none;
+        }
+
+        .login-input:focus {
+            border-color: #6b9b6b;
+        }
+
+        .login-button {
+            background: #4a5a4a;
+            color: #1a1a1a;
+            border: none;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 10px;
+        }
+
+        .login-button:hover {
+            background: #6b9b6b;
+        }
+
+        .login-button:active {
+            background: #5a7a5a;
+        }
+
+        .login-error {
+            color: #b85757;
+            font-size: 11px;
+            min-height: 20px;
+            text-align: center;
+        }
+
+        .login-info {
+            font-size: 10px;
+            color: #666;
+            text-align: center;
+        }
+
+        .filter-sort-button {
+            background: transparent;
+            color: #7a8a7a;
+            border: none;
+            padding: 5px 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        .filter-sort-button:hover {
+            color: #6b9b6b;
+        }
+
+        .filter-dropdown {
+            position: absolute;
+            top: 35px;
+            right: 10px;
+            z-index: 100;
+            min-width: 250px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        .filter-select {
+            width: 100%;
+            background: #0f0f0f;
+            border: 1px solid #4a5a4a;
+            color: #a8b8a8;
+            padding: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #6b9b6b;
+        }
+
+        .filter-apply-button, .filter-reset-button {
+            flex: 1;
+            background: #4a5a4a;
+            color: #1a1a1a;
+            border: none;
+            padding: 5px 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .filter-apply-button:hover {
+            background: #6b9b6b;
+        }
+
+        .filter-reset-button {
+            background: #333;
+            color: #a8b8a8;
+        }
+
+        .filter-reset-button:hover {
+            background: #444;
+        }
+
+        .print-button {
+            background: #4a5a4a;
+            color: #1a1a1a;
+            border: none;
+            padding: 5px 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .print-button:hover {
+            background: #6b9b6b;
+        }
+
+        .schedule-tab {
+            background: transparent;
+            color: #7a8a7a;
+            border: none;
+            padding: 5px 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .schedule-tab:hover {
+            color: #a8b8a8;
+        }
+
+        .schedule-tab.active {
+            color: #6b9b6b;
+            font-weight: bold;
+        }
+
+        .editable-cell {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .editable-cell:hover {
+            background: #2a2a2a;
+            outline: 1px solid #4a5a4a;
+        }
+
+        .editable-cell.editing {
+            background: #2a2a2a;
+            padding: 0;
+        }
+
+        .inline-edit-input {
+            width: 100%;
+            background: #0f0f0f;
+            border: 2px solid #6b9b6b;
+            color: #a8b8a8;
+            padding: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            outline: none;
+        }
+
+        .edit-controls {
+            display: inline-flex;
+            gap: 5px;
+            margin-left: 5px;
+        }
+
+        .edit-save, .edit-cancel {
+            padding: 2px 6px;
+            font-size: 9px;
+            cursor: pointer;
+            border: none;
+            font-family: 'Courier New', monospace;
+        }
+
+        .edit-save {
+            background: #6b9b6b;
+            color: #1a1a1a;
+        }
+
+        .edit-cancel {
+            background: #b85757;
+            color: #1a1a1a;
+        }
+
+        .side-panel-edit-field {
+            margin-bottom: 10px;
+        }
+
+        .side-panel-edit-label {
+            display: block;
+            color: #7a8a7a;
+            font-size: 10px;
+            margin-bottom: 3px;
+        }
+
+        .side-panel-edit-input {
+            width: 100%;
+            background: #0f0f0f;
+            border: 1px solid #4a5a4a;
+            color: #a8b8a8;
+            padding: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+
+        .side-panel-edit-input:focus {
+            border-color: #6b9b6b;
+            outline: none;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .production-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .timeline-item {
+            border-left: 2px solid #4a5a4a;
+            padding-left: 10px;
+            padding: 8px;
+            background: #1a1a1a;
+            font-size: 11px;
+        }
+
+        /* Create Job Panel Styles */
+        .create-panel {
+            position: fixed;
+            top: 0;
+            right: -500px;
+            width: 500px;
+            height: 100%;
+            background: #0f0f0f;
+            border-left: 2px solid #6b9b6b;
+            z-index: 1000;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .create-panel.open {
+            right: 0;
+        }
+
+        .create-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #4a5a4a;
+        }
+
+        .create-panel-title {
+            font-size: 16px;
+            color: #6b9b6b;
+            font-weight: bold;
+        }
+
+        .create-panel-close {
+            cursor: pointer;
+            font-size: 20px;
+            color: #a8b8a8;
+            background: none;
+            border: none;
+            padding: 5px 10px;
+        }
+
+        .create-panel-close:hover {
+            color: #6b9b6b;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            color: #7a8a7a;
+            font-size: 11px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            background: #0a0a0a;
+            border: 1px solid #4a5a4a;
+            color: #a8b8a8;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            outline: none;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: #6b9b6b;
+            box-shadow: 0 0 5px rgba(107, 155, 107, 0.3);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #4a5a4a;
+        }
+
+        .form-button {
+            flex: 1;
+            background: #4a5a4a;
+            color: #1a1a1a;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .form-button:hover {
+            background: #6b9b6b;
+        }
+
+        .form-button.cancel {
+            background: #333;
+            color: #a8b8a8;
+        }
+
+        .form-button.cancel:hover {
+            background: #444;
+        }
+
+        .add-button {
+            background: #6b9b6b;
+            color: #1a1a1a;
+            border: none;
+            padding: 5px 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .add-button:hover {
+            background: #7cab7a;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        body.resizing, body.resizing-vertical {
+            user-select: none;
+        }
+
+        body.resizing *, body.resizing-vertical * {
+            cursor: col-resize !important;
+        }
+    </style>
+    
+    <!-- Include jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- Include API config -->
+    <script src="config.js"></script>
+    <script src="api-integration.js"></script>
+</head>
+<body>
+    <!-- LOGIN SCREEN -->
+    <div class="login-screen" id="login-screen">
+        <div class="login-container">
+            <div class="login-header">
+                <h2>LINDSAY PRECAST</h2>
+                <div style="font-size: 10px; margin-top: 5px;">OPERATIONS CONTROL SYSTEM</div>
+            </div>
+            
+            <div class="login-form">
+                <div class="login-field">
+                    <label>USERNAME</label>
+                    <input type="text" id="login-username" class="login-input" autocomplete="username" />
+                </div>
+                
+                <div class="login-field">
+                    <label>PASSWORD</label>
+                    <input type="password" id="login-password" class="login-input" autocomplete="current-password" />
+                </div>
+                
+                <div id="login-error" class="login-error"></div>
+                
+                <button class="login-button" id="login-button">LOGIN</button>
+                
+                <div class="login-info">
+                    <div style="margin-top: 15px; font-size: 10px; color: #666; border-top: 1px solid #333; padding-top: 10px;">
+                        <strong>Demo Credentials:</strong><br>
+                        admin / admin123<br>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD (hidden until login) -->
+    <div id="main-dashboard" style="display: none;">
+        <div class="header">
+            <div>
+                <h1>LINDSAY PRECAST :: OPERATIONS CONTROL</h1>
+                <div style="font-size: 10px; margin-top: 5px;">SYSTEM v2.1.4 | DATABASE: MONGODB-PROD-01</div>
+            </div>
+            <div class="system-info">
+                USER: <span id="header-username">admin</span><br>
+                TIMESTAMP: <span id="header-timestamp">2025-10-28 14:32:17 UTC</span><br>
+                <span id="header-session">SESSION: ACT-89234</span><br>
+                <button type="button" class="print-button" id="create-customer-button" style="background: #6b9b6b; color: #1a1a1a;">+ CUSTOMER</button>
+                <button type="button" class="print-button" id="create-pm-button" style="background: #6b9b6b; color: #1a1a1a;">+ PM</button>
+                <button type="button" class="print-button" id="create-manager-button" style="background: #6b9b6b; color: #1a1a1a;">+ MANAGER</button>
+                <a href="#" id="logout-link">[LOGOUT]</a>
+            </div>
+        </div>
+
+        <!-- ALERTS -->
+        <div class="alert" id="alert-container">
+            ⚠ SYSTEM READY - No active alerts
+        </div>
+
+        <!-- MAIN DASHBOARD GRID -->
+        <div class="container">
+            <!-- LEFT COLUMN: ACTIVE JOBS -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>ACTIVE JOBS [<span id="active-jobs-count">0</span>]</span>
+                    <span>
+                        <button type="button" class="filter-sort-button" id="filter-button">[FILTER]</button>
+                        <button type="button" class="filter-sort-button" id="sort-button">[SORT]</button>
+                        <button type="button" class="add-button" id="add-job-button">+ ADD JOB</button>
+                        <button type="button" class="print-button" id="export-csv-button">EXPORT CSV</button>
+                    </span>
+                </div>
+                
+                <!-- Filter Dropdown -->
+                <div class="filter-dropdown" id="filter-dropdown" style="display: none;">
+                    <div style="padding: 10px; background: #1a1a1a; border: 1px solid #4a5a4a;">
+                        <div style="margin-bottom: 10px; color: #6b9b6b; font-weight: bold;">FILTER BY:</div>
+                        
+                        <div style="margin-bottom: 8px;">
+                            <label style="display: block; margin-bottom: 3px; color: #7a8a7a;">Stage:</label>
+                            <select id="filter-stage" class="filter-select">
+                                <option value="all">ALL STAGES</option>
+                                <option value="QUOTE">QUOTE</option>
+                                <option value="ENGINEERING">ENGINEERING</option>
+                                <option value="PRODUCTION">PRODUCTION</option>
+                                <option value="DELIVERY">DELIVERY</option>
+                            </select>
+                        </div>
+                        
+                        <div style="margin-bottom: 8px;">
+                            <label style="display: block; margin-bottom: 3px; color: #7a8a7a;">Status:</label>
+                            <select id="filter-status" class="filter-select">
+                                <option value="all">ALL STATUSES</option>
+                                <option value="ON_TRACK">ON TRACK</option>
+                                <option value="AT_RISK">AT RISK</option>
+                                <option value="DELAYED">DELAYED</option>
+                            </select>
+                        </div>
+                        
+                        <div style="margin-top: 10px; display: flex; gap: 5px;">
+                            <button type="button" class="filter-apply-button" id="apply-filter">APPLY</button>
+                            <button type="button" class="filter-reset-button" id="reset-filter">RESET</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sort Dropdown -->
+                <div class="filter-dropdown" id="sort-dropdown" style="display: none;">
+                    <div style="padding: 10px; background: #1a1a1a; border: 1px solid #4a5a4a;">
+                        <div style="margin-bottom: 10px; color: #6b9b6b; font-weight: bold;">SORT BY:</div>
+                        <button type="button" class="sort-option active" data-sort="status">Status (Priority)</button>
+                    </div>
+                </div>
+                
+                <table id="active-jobs-table">
+                    <thead>
+                        <tr>
+                            <th>STAT</th>
+                            <th>JOB#</th>
+                            <th>CUSTOMER</th>
+                            <th>STAGE</th>
+                            <th>PM</th>
+                            <th>DUE</th>
+                            <th>PROGRESS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="active-jobs-tbody">
+                        <tr><td colspan="7" style="text-align: center; color: #7a8a7a;">Loading...</td></tr>
+                    </tbody>
+                </table>
+
+                <div style="font-size: 10px; color: #666;">
+                    LEGEND: <span style="color: #b85757;">RED=DELAYED</span> | <span style="color: #b8a557;">YELLOW=AT_RISK</span> | <span style="color: #6b9b6b;">GREEN=ON_TRACK</span>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: SYSTEM METRICS -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>SYSTEM METRICS</span>
+                </div>
+
+                <div class="metric-grid">
+                    <div class="metric">
+                        <div class="metric-label">ACTIVE_JOBS</div>
+                        <div class="metric-value" id="metric-active">0</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">IN_PRODUCTION</div>
+                        <div class="metric-value" id="metric-production">0</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">READY_TO_SHIP</div>
+                        <div class="metric-value" id="metric-ready">0</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">REVENUE_MTD</div>
+                        <div class="metric-value" id="metric-revenue">$0K</div>
+                    </div>
+                </div>
+
+                <div class="panel-header" style="margin: 10px -10px 10px -10px;">
+                    <span>PROJECT MANAGERS</span>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>PM</th>
+                            <th>ACTIVE</th>
+                            <th>CAPACITY</th>
+                            <th>LOAD</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pm-tbody">
+                        <tr><td colspan="4" style="text-align: center; color: #7a8a7a;">Loading...</td></tr>
+                    </tbody>
+                </table>
+
+                <div class="panel-header" style="margin: 10px -10px 10px -10px;">
+                    <span>RECENT ACTIVITY</span>
+                </div>
+
+                <div style="font-size: 10px; line-height: 1.6;" id="activity-log">
+                    <div style="color: #7a8a7a;">Loading activity...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRODUCTION SCHEDULE -->
+        <div class="panel full-width">
+            <div class="panel-header">
+                <span>PRODUCTION SCHEDULE :: <span id="schedule-time-range">NEXT 7 DAYS</span></span>
+                <span>
+                    <button class="schedule-tab active" data-range="daily">[DAILY]</button>
+                    <button class="schedule-tab" data-range="weekly">[WEEKLY]</button>
+                </span>
+            </div>
+
+            <div class="production-timeline" id="production-timeline-container">
+                <div style="text-align: center; color: #7a8a7a;">Loading schedule...</div>
+            </div>
+        </div>
+
+        <!-- WORKFLOW DISTRIBUTION -->
+        <div class="container">
+            <div class="panel">
+                <div class="panel-header">
+                    <span>WORKFLOW DISTRIBUTION</span>
+                </div>
+
+                <div style="margin-bottom: 5px; font-size: 10px;">QUOTE: <span id="workflow-quote">0</span> JOBS</div>
+                <div class="workflow-bar">
+                    <div class="workflow-creation" style="flex: 1; text-align: center; font-size: 9px;">QUOTE</div>
+                </div>
+
+                <div style="margin-bottom: 5px; font-size: 10px;">ENGINEERING: <span id="workflow-eng">0</span> JOBS</div>
+                <div class="workflow-bar">
+                    <div class="workflow-engineering" style="flex: 1; text-align: center; font-size: 9px;">ENG</div>
+                </div>
+
+                <div style="margin-bottom: 5px; font-size: 10px;">PRODUCTION: <span id="workflow-prod">0</span> JOBS</div>
+                <div class="workflow-bar">
+                    <div class="workflow-production" style="flex: 1; text-align: center; font-size: 9px;">PROD</div>
+                </div>
+
+                <div style="margin-bottom: 5px; font-size: 10px;">DELIVERY: <span id="workflow-delv">0</span> JOBS</div>
+                <div class="workflow-bar">
+                    <div class="workflow-delivery" style="flex: 1; text-align: center; font-size: 9px;">DELV</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <span>INVENTORY STATUS</span>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>MATERIAL</th>
+                            <th>CURRENT</th>
+                            <th>MIN</th>
+                            <th>STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-tbody">
+                        <tr><td colspan="4" style="text-align: center; color: #7a8a7a;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- COMMAND LINE INTERFACE -->
+        <div class="command-line" id="terminal-container">
+            <div class="terminal-resize-handle" id="terminal-resize"></div>
+            <div id="terminal-output"></div>
+            <div>
+                <span class="command-prompt">admin@lindsay-precast:~$</span> 
+                <input type="text" id="terminal-input" style="background: transparent; border: none; color: #a8b8a8; outline: none; font-family: 'Courier New', monospace; font-size: 11px; width: 80%;" />
+            </div>
+            <div style="margin-top: 10px; font-size: 10px; color: #666;">
+                COMMANDS: list_jobs | job_status [JOB#] | help | clear
+            </div>
+        </div>
+
+    </div>
+    <!-- END MAIN DASHBOARD -->
+
+    <!-- SIDE PANEL OVERLAY -->
+    <div class="side-panel-overlay" id="panel-overlay"></div>
+
+    <!-- CREATE PM PANEL -->
+    <div class="create-panel" id="create-pm-panel">
+        <div class="create-panel-header">
+            <div class="create-panel-title">CREATE PROJECT MANAGER</div>
+            <button class="create-panel-close" id="close-create-pm-panel">✕</button>
+        </div>
+
+        <form id="create-pm-form">
+            <div class="form-group">
+                <label class="form-label">Name *</label>
+                <input type="text" class="form-input" id="form-pm-name" placeholder="e.g., John Smith" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Employee Code *</label>
+                <input type="text" class="form-input" id="form-pm-code" placeholder="e.g., SMITH_J" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email *</label>
+                <input type="email" class="form-input" id="form-pm-email" placeholder="e.g., john@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Phone</label>
+                <input type="tel" class="form-input" id="form-pm-phone" placeholder="Phone number">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Department</label>
+                <select class="form-select" id="form-pm-department">
+                    <option value="MANAGEMENT">Management</option>
+                    <option value="ENGINEERING">Engineering</option>
+                    <option value="PRODUCTION">Production</option>
+                    <option value="DELIVERY">Delivery</option>
+                    <option value="SALES">Sales</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Capacity (max concurrent jobs)</label>
+                <input type="number" class="form-input" id="form-pm-capacity" placeholder="10" value="10" min="1">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="form-button">CREATE PM</button>
+                <button type="button" class="form-button cancel" onclick="closeCreatePMPanel()">CANCEL</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- CREATE MANAGER PANEL -->
+    <div class="create-panel" id="create-manager-panel">
+        <div class="create-panel-header">
+            <div class="create-panel-title">CREATE PRODUCTION MANAGER</div>
+            <button class="create-panel-close" id="close-create-manager-panel">✕</button>
+        </div>
+
+        <form id="create-manager-form">
+            <div class="form-group">
+                <label class="form-label">Name *</label>
+                <input type="text" class="form-input" id="form-manager-name" placeholder="e.g., Jane Doe" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Employee Code *</label>
+                <input type="text" class="form-input" id="form-manager-code" placeholder="e.g., DOE_J" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email *</label>
+                <input type="email" class="form-input" id="form-manager-email" placeholder="e.g., jane@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Phone</label>
+                <input type="tel" class="form-input" id="form-manager-phone" placeholder="Phone number">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Department</label>
+                <select class="form-select" id="form-manager-department">
+                    <option value="PRODUCTION">Production</option>
+                    <option value="MANAGEMENT">Management</option>
+                    <option value="ENGINEERING">Engineering</option>
+                    <option value="DELIVERY">Delivery</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Capacity (max concurrent jobs)</label>
+                <input type="number" class="form-input" id="form-manager-capacity" placeholder="10" value="10" min="1">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="form-button">CREATE MANAGER</button>
+                <button type="button" class="form-button cancel" onclick="closeCreateManagerPanel()">CANCEL</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- CREATE JOB PANEL -->
+    <div class="create-panel" id="create-panel">
+        <div class="create-panel-header">
+            <div class="create-panel-title">CREATE NEW JOB</div>
+            <button class="create-panel-close" id="close-create-panel">✕</button>
+        </div>
+
+        <form id="create-job-form">
+            <div class="form-group">
+                <label class="form-label">Customer Name *</label>
+                <select class="form-select" id="form-customer" required>
+                    <option value="">-- Select a Customer --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Job Number *</label>
+                <input type="text" class="form-input" id="form-job-number" placeholder="e.g., JOB-2025-001" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Stage *</label>
+                <select class="form-select" id="form-stage" required>
+                    <option value="">-- Select Stage --</option>
+                    <option value="QUOTE">QUOTE</option>
+                    <option value="ENGINEERING">ENGINEERING</option>
+                    <option value="PRODUCTION">PRODUCTION</option>
+                    <option value="DELIVERY">DELIVERY</option>
+                    <option value="COMPLETE">COMPLETE</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Status *</label>
+                <select class="form-select" id="form-status" required>
+                    <option value="">-- Select Status --</option>
+                    <option value="ON_TRACK">ON TRACK</option>
+                    <option value="AT_RISK">AT RISK</option>
+                    <option value="DELAYED">DELAYED</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Project Manager</label>
+                <input type="text" class="form-input" id="form-pm" placeholder="e.g., SMITH_J">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Progress (%)</label>
+                <input type="number" class="form-input" id="form-progress" placeholder="0" min="0" max="100" value="0">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Due Date</label>
+                <input type="date" class="form-input" id="form-due-date">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Quote Amount</label>
+                <input type="number" class="form-input" id="form-quote-amount" placeholder="0" step="100">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea class="form-textarea" id="form-description" placeholder="Job description..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Custom Entry (Additional Info)</label>
+                <textarea class="form-textarea" id="form-custom-entry" placeholder="Add any additional custom information or notes..."></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="form-button">CREATE JOB</button>
+                <button type="button" class="form-button cancel" onclick="closeCreatePanel()">CANCEL</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- CREATE CUSTOMER PANEL -->
+    <div class="create-panel" id="create-customer-panel">
+        <div class="create-panel-header">
+            <div class="create-panel-title">CREATE NEW CUSTOMER</div>
+            <button class="create-panel-close" id="close-create-customer-panel">✕</button>
+        </div>
+
+        <form id="create-customer-form">
+            <div class="form-group">
+                <label class="form-label">Customer Name *</label>
+                <input type="text" class="form-input" id="form-customer-name" placeholder="e.g., ABC CONSTRUCTION" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email *</label>
+                <input type="email" class="form-input" id="form-customer-email" placeholder="e.g., contact@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Phone *</label>
+                <input type="tel" class="form-input" id="form-customer-phone" placeholder="e.g., (555) 123-4567" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Address</label>
+                <input type="text" class="form-input" id="form-customer-address" placeholder="Street address">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">City</label>
+                <input type="text" class="form-input" id="form-customer-city" placeholder="City">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">State</label>
+                <input type="text" class="form-input" id="form-customer-state" placeholder="State">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Contact Person</label>
+                <input type="text" class="form-input" id="form-customer-contact" placeholder="Contact person name" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Notes</label>
+                <textarea class="form-textarea" id="form-customer-notes" placeholder="Additional notes..."></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="form-button">CREATE CUSTOMER</button>
+                <button type="button" class="form-button cancel" onclick="closeCreateCustomerPanel()">CANCEL</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- JOB DETAIL SIDE PANEL -->
+    <div class="side-panel" id="job-detail-panel">
+        <div class="side-panel-header">
+            <div class="side-panel-title" id="panel-job-number">JOB-XXXX</div>
+            <button class="side-panel-close" id="close-panel">✕</button>
+        </div>
+
+        <div class="side-panel-section">
+            <div class="side-panel-section-title">Customer Information</div>
+            <div class="side-panel-data">
+                <div class="side-panel-label">Company:</div>
+                <div class="side-panel-value" id="panel-customer">-</div>
+                
+                <div class="side-panel-label">Job Name:</div>
+                <div class="side-panel-value" id="panel-job-name">-</div>
+            </div>
+        </div>
+
+        <div class="side-panel-section">
+            <div class="side-panel-section-title">Job Status</div>
+            <div class="side-panel-data">
+                <div class="side-panel-label">Status:</div>
+                <div class="side-panel-value" id="panel-status" style="color: #6b9b6b;">-</div>
+                
+                <div class="side-panel-label">Stage:</div>
+                <div class="side-panel-value" id="panel-stage">-</div>
+                
+                <div class="side-panel-label">Progress:</div>
+                <div class="side-panel-value" id="panel-progress">-</div>
+
+                <div class="side-panel-label">Priority:</div>
+                <div class="side-panel-value" id="panel-priority">-</div>
+            </div>
+        </div>
+
+        <div class="side-panel-section">
+            <div class="side-panel-section-title">Project Manager</div>
+            <div class="side-panel-data">
+                <div class="side-panel-label">PM Name:</div>
+                <div class="side-panel-value" id="panel-pm-name">-</div>
+                
+                <div class="side-panel-label">PM Code:</div>
+                <div class="side-panel-value" id="panel-pm-code">-</div>
+            </div>
+        </div>
+
+        <div class="side-panel-section">
+            <div class="side-panel-section-title">Financial Information</div>
+            <div class="side-panel-data">
+                <div class="side-panel-label">Quote Amount:</div>
+                <div class="side-panel-value" id="panel-quote">-</div>
+                
+                <div class="side-panel-label">Actual Cost:</div>
+                <div class="side-panel-value" id="panel-cost">-</div>
+                
+                <div class="side-panel-label">Profit Margin:</div>
+                <div class="side-panel-value" id="panel-margin">-</div>
+            </div>
+        </div>
+
+        <div class="side-panel-section">
+            <div class="side-panel-section-title">Timeline</div>
+            <div class="side-panel-data">
+                <div class="side-panel-label">Due Date:</div>
+                <div class="side-panel-value" id="panel-due-date">-</div>
+                
+                <div class="side-panel-label">Estimated Completion:</div>
+                <div class="side-panel-value" id="panel-est-completion">-</div>
+
+                <div class="side-panel-label">Created:</div>
+                <div class="side-panel-value" id="panel-created">-</div>
+            </div>
+        </div>
+
+        <div class="side-panel-section">
+            <div class="side-panel-section-title">Products</div>
+            <div class="side-panel-data">
+                <div class="side-panel-label">Description:</div>
+                <div class="side-panel-value" id="panel-products">-</div>
+            </div>
+        </div>
+
+        <div class="side-panel-section">
+            <div class="side-panel-section-title">Notes</div>
+            <div class="side-panel-data">
+                <div class="side-panel-value" id="panel-notes" style="word-break: break-word; white-space: pre-wrap;">-</div>
+            </div>
+        </div>
+
+        <div class="side-panel-actions">
+            <button class="side-panel-button" id="close-panel-btn">CLOSE</button>
+        </div>
+    </div>
+
+    <script>
+        // Main application initialization
+        let currentUser = null;
+        let authToken = null;
+        let currentJobs = [];
+
+        // Login handler
+        async function handleLogin() {
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errorDiv = document.getElementById('login-error');
+
+            if (!username || !password) {
+                errorDiv.textContent = 'Please enter username and password';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.token) {
+                    errorDiv.textContent = data.message || 'Invalid credentials';
+                    document.getElementById('login-password').value = '';
+                    return;
+                }
+
+                authToken = data.token;
+                currentUser = data.user;
+                sessionStorage.setItem('authToken', authToken);
+                sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                showDashboard();
+            } catch (error) {
+                console.error('Login error:', error);
+                errorDiv.textContent = 'Connection error: ' + error.message;
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('main-dashboard').style.display = 'block';
+            document.getElementById('header-username').textContent = currentUser.username;
+            document.getElementById('terminal-input').focus();
+            loadDashboardData();
+            startAutoRefresh();
+        }
+
+        function showLoginScreen() {
+            authToken = null;
+            currentUser = null;
+            sessionStorage.removeItem('authToken');
+            sessionStorage.removeItem('currentUser');
+            document.getElementById('login-screen').style.display = 'flex';
+            document.getElementById('main-dashboard').style.display = 'none';
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-error').textContent = '';
+        }
+
+        // Check for existing session
+        window.addEventListener('load', function() {
+            const savedToken = sessionStorage.getItem('authToken');
+            const savedUser = sessionStorage.getItem('currentUser');
+
+            if (savedToken && savedUser) {
+                authToken = savedToken;
+                currentUser = JSON.parse(savedUser);
+                showDashboard();
+            }
+
+            // Setup event listeners
+            document.getElementById('login-button').addEventListener('click', handleLogin);
+            document.getElementById('login-password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') handleLogin();
+            });
+            document.getElementById('login-username').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') document.getElementById('login-password').focus();
+            });
+
+            document.getElementById('logout-link').addEventListener('click', function(e) {
+                e.preventDefault();
+                showLoginScreen();
+            });
+
+            document.getElementById('close-panel').addEventListener('click', closeJobPanel);
+            document.getElementById('panel-overlay').addEventListener('click', closeJobPanel);
+            document.getElementById('close-panel-btn').addEventListener('click', closeJobPanel);
+
+            document.getElementById('add-job-button').addEventListener('click', openCreatePanel);
+            document.getElementById('close-create-panel').addEventListener('click', closeCreatePanel);
+            document.getElementById('create-job-form').addEventListener('submit', handleCreateJob);
+
+            document.getElementById('create-customer-button').addEventListener('click', openCreateCustomerPanel);
+            document.getElementById('close-create-customer-panel').addEventListener('click', closeCreateCustomerPanel);
+            document.getElementById('create-customer-form').addEventListener('submit', handleCreateCustomer);
+
+            document.getElementById('create-pm-button').addEventListener('click', openCreatePMPanel);
+            document.getElementById('close-create-pm-panel').addEventListener('click', closeCreatePMPanel);
+            document.getElementById('create-pm-form').addEventListener('submit', handleCreatePM);
+
+            document.getElementById('create-manager-button').addEventListener('click', openCreateManagerPanel);
+            document.getElementById('close-create-manager-panel').addEventListener('click', closeCreateManagerPanel);
+            document.getElementById('create-manager-form').addEventListener('submit', handleCreateManager);
+
+            setupTerminal();
+            setupPanelResize();
+        });
+
+        // Load dashboard data from API
+        async function loadDashboardData() {
+            try {
+                const response = await makeAuthenticatedRequest(`${API_BASE_URL}/api/jobs`);
+                currentJobs = response.data || [];
+                updateDashboard();
+            } catch (error) {
+                console.error('Failed to load dashboard data:', error);
+                printToTerminal('ERROR: Failed to load data', '#b85757');
+            }
+        }
+
+        function updateDashboard() {
+            updateJobsTable();
+            updateMetrics();
+            updatePMWorkload();
+            updateInventory();
+            updateWorkflow();
+        }
+
+        function updateJobsTable() {
+            const tbody = document.getElementById('active-jobs-tbody');
+            tbody.innerHTML = '';
+
+            currentJobs.slice(0, 8).forEach(job => {
+                const row = document.createElement('tr');
+                row.setAttribute('data-job', job.jobNumber);
+
+                let statusClass = 'status-green';
+                if (job.status === 'DELAYED') statusClass = 'status-red';
+                if (job.status === 'AT_RISK') statusClass = 'status-yellow';
+
+                const dueDate = new Date(job.dueDate);
+                const offsetColor = job.daysOffset < 0 ? '#b85757' : '#6b9b6b';
+                const offsetSign = job.daysOffset > 0 ? '+' : '';
+
+                row.innerHTML = `
+                    <td><span class="status-indicator ${statusClass}"></span></td>
+                    <td><a href="#" class="job-link">${job.jobNumber}</a></td>
+                    <td>${job.customerName || '-'}</td>
+                    <td>${job.stage || '-'}</td>
+                    <td>${job.pmCode || '-'}</td>
+                    <td>${dueDate.toLocaleDateString().substring(0, 5)} <span style="color: ${offsetColor};">[${offsetSign}${job.daysOffset || 0}D]</span></td>
+                    <td>${job.progress || '0'}%</td>
+                `;
+
+                row.querySelector('.job-link').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    openJobPanel(job);
+                });
+
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('active-jobs-count').textContent = currentJobs.length;
+        }
+
+        function updateMetrics() {
+            const stats = {
+                totalJobs: currentJobs.length,
+                inProduction: currentJobs.filter(j => j.stage === 'PRODUCTION').length,
+                readyToShip: currentJobs.filter(j => j.stage === 'DELIVERY').length,
+                revenue: currentJobs.reduce((sum, j) => sum + (parseInt(j.quoteAmount) || 0), 0)
+            };
+
+            document.getElementById('metric-active').textContent = stats.totalJobs;
+            document.getElementById('metric-production').textContent = stats.inProduction;
+            document.getElementById('metric-ready').textContent = stats.readyToShip;
+            document.getElementById('metric-revenue').textContent = '$' + Math.round(stats.revenue / 1000) + 'K';
+        }
+
+        function updatePMWorkload() {
+            const tbody = document.getElementById('pm-tbody');
+            tbody.innerHTML = '';
+
+            const pmMap = {};
+            currentJobs.forEach(job => {
+                const pm = job.pmCode || 'UNASSIGNED';
+                if (!pmMap[pm]) {
+                    pmMap[pm] = { jobs: 0, capacity: 10, load: 0 };
+                }
+                pmMap[pm].jobs++;
+            });
+
+            Object.entries(pmMap).forEach(([pm, data]) => {
+                const row = document.createElement('tr');
+                data.load = Math.round((data.jobs / data.capacity) * 100);
+                const loadColor = data.load >= 80 ? '#b8a557' : '#6b9b6b';
+
+                row.innerHTML = `
+                    <td>${pm}</td>
+                    <td>${data.jobs}</td>
+                    <td>${data.capacity}</td>
+                    <td><span style="color: ${loadColor};">${data.load}%</span></td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateInventory() {
+            const tbody = document.getElementById('inventory-tbody');
+            tbody.innerHTML = '';
+
+            const inventory = [
+                { material: 'REBAR_#4', current: '2850 LB', min: '2000 LB', status: 'OK', color: '#6b9b6b' },
+                { material: 'REBAR_#6', current: '450 LB', min: '1500 LB', status: 'LOW', color: '#b85757' },
+                { material: 'CONCRETE', current: '87 YD³', min: '50 YD³', status: 'OK', color: '#6b9b6b' },
+                { material: 'EMBEDMENTS', current: '234 UN', min: '100 UN', status: 'OK', color: '#6b9b6b' },
+            ];
+
+            inventory.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.material}</td>
+                    <td>${item.current}</td>
+                    <td>${item.min}</td>
+                    <td><span style="color: ${item.color};">${item.status}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateWorkflow() {
+            const quote = currentJobs.filter(j => j.stage === 'QUOTE').length;
+            const eng = currentJobs.filter(j => j.stage === 'ENGINEERING').length;
+            const prod = currentJobs.filter(j => j.stage === 'PRODUCTION').length;
+            const delv = currentJobs.filter(j => j.stage === 'DELIVERY').length;
+
+            document.getElementById('workflow-quote').textContent = quote;
+            document.getElementById('workflow-eng').textContent = eng;
+            document.getElementById('workflow-prod').textContent = prod;
+            document.getElementById('workflow-delv').textContent = delv;
+        }
+
+        function openJobPanel(job) {
+            document.getElementById('panel-job-number').textContent = job.jobNumber;
+            document.getElementById('panel-customer').textContent = job.customerName || '-';
+            document.getElementById('panel-job-name').textContent = job.jobName || '-';
+            document.getElementById('panel-stage').textContent = job.stage || '-';
+            document.getElementById('panel-status').textContent = job.status || 'ON_TRACK';
+            document.getElementById('panel-progress').textContent = (job.progress || 0) + '%';
+            document.getElementById('panel-priority').textContent = job.priority || 'N/A';
+            document.getElementById('panel-products').textContent = job.products || 'N/A';
+            document.getElementById('panel-notes').textContent = job.notes || 'N/A';
+            document.getElementById('panel-pm-name').textContent = job.pmName || 'N/A';
+            document.getElementById('panel-pm-code').textContent = job.pmCode || 'N/A';
+            document.getElementById('panel-quote').textContent = `$${(job.quoteAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('panel-cost').textContent = `$${(job.actualCost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('panel-margin').textContent = job.profitMargin ? `${(job.profitMargin).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : 'N/A';
+            document.getElementById('panel-due-date').textContent = job.timeline?.dueDate ? new Date(job.timeline.dueDate).toLocaleDateString() : 'N/A';
+            document.getElementById('panel-est-completion').textContent = job.timeline?.estimatedCompletionDate ? new Date(job.timeline.estimatedCompletionDate).toLocaleDateString() : 'N/A';
+            document.getElementById('panel-created').textContent = new Date(job.createdAt).toLocaleDateString();
+
+            document.getElementById('job-detail-panel').classList.add('open');
+            document.getElementById('panel-overlay').classList.add('active');
+        }
+
+        function closeJobPanel() {
+            document.getElementById('job-detail-panel').classList.remove('open');
+            document.getElementById('panel-overlay').classList.remove('active');
+        }
+
+        function openCreatePanel() {
+            document.getElementById('create-panel').classList.add('open');
+            loadCustomersIntoDropdown();
+        }
+        
+        async function loadCustomersIntoDropdown() {
+            try {
+                const response = await getCustomers();
+                const customers = response.data || response.customers || [];
+                const select = document.getElementById('form-customer');
+                
+                // Keep the placeholder option
+                select.innerHTML = '<option value="">-- Select a Customer --</option>';
+                
+                // Add customers to dropdown
+                customers.forEach(customer => {
+                    const option = document.createElement('option');
+                    option.value = customer._id;
+                    option.textContent = customer.companyName;
+                    select.appendChild(option);
+                });
+                
+                if (customers.length === 0) {
+                    printToTerminal('No customers found. Create a customer first!', '#b8a557');
+                }
+            } catch (error) {
+                console.error('Failed to load customers:', error);
+                printToTerminal('ERROR: Failed to load customers', '#b85757');
+            }
+        }
+
+        function closeCreatePanel() {
+            document.getElementById('create-panel').classList.remove('open');
+            document.getElementById('create-job-form').reset();
+        }
+
+        async function handleCreateJob(e) {
+            e.preventDefault();
+
+            const customerSelect = document.getElementById('form-customer');
+            const customerOption = customerSelect.options[customerSelect.selectedIndex];
+            
+            const jobData = {
+                customer: document.getElementById('form-customer').value,
+                jobName: document.getElementById('form-description').value || 'New Job',
+                stage: document.getElementById('form-stage').value,
+                status: document.getElementById('form-status').value,
+                pmCode: document.getElementById('form-pm').value || 'UNASSIGNED',
+                progress: parseInt(document.getElementById('form-progress').value) || 0,
+                timeline: {
+                    dueDate: document.getElementById('form-due-date').value || new Date().toISOString().split('T')[0]
+                },
+                quoteAmount: parseInt(document.getElementById('form-quote-amount').value) || 0,
+                notes: document.getElementById('form-description').value + '\n[CUSTOM]: ' + (document.getElementById('form-custom-entry').value || '')
+            };
+
+            try {
+                printToTerminal('Creating job...', '#6b9b6b');
+                
+                const response = await createJob(jobData);
+                
+                printToTerminal(`SUCCESS: Job ${jobData.jobNumber} created!`, '#6b9b6b');
+                closeCreatePanel();
+                
+                // Refresh dashboard
+                await loadDashboardData();
+                
+                printToTerminal('Dashboard refreshed with new job', '#6b9b6b');
+            } catch (error) {
+                console.error('Create job error:', error);
+                printToTerminal(`ERROR: Failed to create job - ${error.message}`, '#b85757');
+            }
+        }
+
+        function openCreateCustomerPanel() {
+            document.getElementById('create-customer-panel').classList.add('open');
+        }
+
+        function closeCreateCustomerPanel() {
+            document.getElementById('create-customer-panel').classList.remove('open');
+            document.getElementById('create-customer-form').reset();
+        }
+
+                async function handleCreateCustomer(e) {
+            e.preventDefault();
+
+            const customerData = {
+                companyName: document.getElementById('form-customer-name').value,
+                contactPerson: document.getElementById('form-customer-contact').value,
+                email: document.getElementById('form-customer-email').value,
+                phone: document.getElementById('form-customer-phone').value,
+                address: {
+                    street: document.getElementById('form-customer-address').value,
+                    city: document.getElementById('form-customer-city').value,
+                    state: document.getElementById('form-customer-state').value,
+                    zip: ''
+                },
+                customerType: 'contractor',
+                notes: document.getElementById('form-customer-notes').value
+            };
+
+            try {
+                printToTerminal('Creating customer...', '#6b9b6b');
+                
+                const response = await createCustomer(customerData);
+                
+                printToTerminal(`SUCCESS: Customer "${customerData.companyName}" created!`, '#6b9b6b');
+                closeCreateCustomerPanel();
+                printToTerminal('You can now create jobs for this customer', '#6b9b6b');
+                await loadDashboardData();
+            } catch (error) {
+                console.error('Create customer error:', error);
+                printToTerminal(`ERROR: Failed to create customer - ${error.message}`, '#b85757');
+            }
+        }
+
+        function openCreatePMPanel() {
+            document.getElementById('create-pm-panel').classList.add('open');
+        }
+
+        function closeCreatePMPanel() {
+            document.getElementById('create-pm-panel').classList.remove('open');
+            document.getElementById('create-pm-form').reset();
+        }
+
+        async function handleCreatePM(e) {
+            e.preventDefault();
+
+            const pmData = {
+                name: document.getElementById('form-pm-name').value,
+                employeeCode: document.getElementById('form-pm-code').value,
+                email: document.getElementById('form-pm-email').value,
+                phone: document.getElementById('form-pm-phone').value,
+                role: 'PROJECT_MANAGER',
+                department: document.getElementById('form-pm-department').value,
+                capacity: parseInt(document.getElementById('form-pm-capacity').value) || 10
+            };
+
+            try {
+                printToTerminal('Creating PM...', '#6b9b6b');
+                
+                await makeAuthenticatedRequest(`${API_BASE_URL}/api/employees`, {
+                    method: 'POST',
+                    body: JSON.stringify(pmData)
+                });
+                
+                printToTerminal(`SUCCESS: Project Manager "${pmData.name}" created!`, '#6b9b6b');
+                closeCreatePMPanel();
+                await loadDashboardData();
+            } catch (error) {
+                console.error('Create PM error:', error);
+                printToTerminal(`ERROR: Failed to create PM - ${error.message}`, '#b85757');
+            }
+        }
+
+        function openCreateManagerPanel() {
+            document.getElementById('create-manager-panel').classList.add('open');
+        }
+
+        function closeCreateManagerPanel() {
+            document.getElementById('create-manager-panel').classList.remove('open');
+            document.getElementById('create-manager-form').reset();
+        }
+
+        async function handleCreateManager(e) {
+            e.preventDefault();
+
+            const managerData = {
+                name: document.getElementById('form-manager-name').value,
+                employeeCode: document.getElementById('form-manager-code').value,
+                email: document.getElementById('form-manager-email').value,
+                phone: document.getElementById('form-manager-phone').value,
+                role: 'PRODUCTION_MANAGER',
+                department: document.getElementById('form-manager-department').value,
+                capacity: parseInt(document.getElementById('form-manager-capacity').value) || 10
+            };
+
+            try {
+                printToTerminal('Creating Production Manager...', '#6b9b6b');
+                
+                await makeAuthenticatedRequest(`${API_BASE_URL}/api/employees`, {
+                    method: 'POST',
+                    body: JSON.stringify(managerData)
+                });
+                
+                printToTerminal(`SUCCESS: Production Manager "${managerData.name}" created!`, '#6b9b6b');
+                closeCreateManagerPanel();
+                await loadDashboardData();
+            } catch (error) {
+                console.error('Create manager error:', error);
+                printToTerminal(`ERROR: Failed to create manager - ${error.message}`, '#b85757');
+            }
+        }
+
+        
+        let terminalOutput;
+        let terminalInput;
+
+        function setupTerminal() {
+            terminalOutput = document.getElementById('terminal-output');
+            terminalInput = document.getElementById('terminal-input');
+
+            terminalInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const cmd = terminalInput.value.trim();
+                    if (cmd) {
+                        printToTerminal(`<span class="command-prompt">admin@lindsay-precast:~$</span> ${cmd}`);
+                        executeCommand(cmd);
+                    }
+                    terminalInput.value = '';
+                }
+            });
+
+            printToTerminal('LINDSAY PRECAST OPERATIONS TERMINAL v2.1.4', '#6b9b6b');
+            printToTerminal('Type "help" for available commands.');
+            printToTerminal('');
+        }
+
+        function printToTerminal(text, color = '#a8b8a8') {
+            const line = document.createElement('div');
+            line.style.color = color;
+            line.style.marginBottom = '5px';
+            line.innerHTML = text;
+            terminalOutput.appendChild(line);
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        }
+
+        function executeCommand(cmd) {
+            const parts = cmd.trim().split(' ');
+            const command = parts[0].toLowerCase();
+
+            switch(command) {
+                case 'help':
+                    printToTerminal('AVAILABLE COMMANDS:', '#6b9b6b');
+                    printToTerminal('  list_jobs - List all jobs');
+                    printToTerminal('  job_status [JOB#] - Show job status');
+                    printToTerminal('  clear - Clear terminal');
+                    break;
+                case 'list_jobs':
+                    printToTerminal(`TOTAL JOBS: ${currentJobs.length}`, '#6b9b6b');
+                    currentJobs.forEach(job => {
+                        printToTerminal(`${job.jobNumber} | ${job.customerName} | ${job.stage} | ${job.progress}%`);
+                    });
+                    break;
+                case 'job_status':
+                    if (parts.length < 2) {
+                        printToTerminal('ERROR: Job number required', '#b85757');
+                    } else {
+                        const job = currentJobs.find(j => j.jobNumber === parts[1].toUpperCase());
+                        if (job) {
+                            printToTerminal(`JOB: ${job.jobNumber} | Status: ${job.status} | Progress: ${job.progress}%`, '#6b9b6b');
+                        } else {
+                            printToTerminal(`ERROR: Job not found`, '#b85757');
+                        }
+                    }
+                    break;
+                case 'clear':
+                    terminalOutput.innerHTML = '';
+                    break;
+                case 'create_job':
+                    openCreatePanel();
+                    break;
+                default:
+                    printToTerminal(`ERROR: Unknown command "${command}". Type "help" for available commands.`, '#b85757');
+            }
+        }
+
+        function setupPanelResize() {
+            const container = document.querySelector('.container');
+            if (!container) return;
+
+            const panels = container.querySelectorAll('.panel');
+            if (panels.length !== 2) return;
+
+            let resizeHandle = container.querySelector('.panel-resize-handle');
+            if (!resizeHandle) {
+                resizeHandle = document.createElement('div');
+                resizeHandle.className = 'panel-resize-handle';
+                container.appendChild(resizeHandle);
+            }
+
+            function updateHandlePosition() {
+                const leftPanel = panels[0];
+                const containerRect = container.getBoundingClientRect();
+                const leftPanelRect = leftPanel.getBoundingClientRect();
+                const relativeLeft = leftPanelRect.right - containerRect.left;
+                resizeHandle.style.left = relativeLeft + 'px';
+            }
+
+            setTimeout(updateHandlePosition, 0);
+            setTimeout(updateHandlePosition, 100);
+
+            window.addEventListener('resize', updateHandlePosition);
+
+            let startX, containerWidth, startLeftWidth, startRightWidth;
+
+            resizeHandle.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                startX = e.pageX;
+                containerWidth = container.offsetWidth;
+                startLeftWidth = panels[0].offsetWidth;
+                startRightWidth = panels[1].offsetWidth;
+
+                document.body.classList.add('resizing');
+
+                const mouseMoveHandler = function(e) {
+                    const deltaX = e.pageX - startX;
+                    const newLeftWidth = startLeftWidth + deltaX;
+                    const newRightWidth = startRightWidth - deltaX;
+
+                    if (newLeftWidth >= 300 && newRightWidth >= 250) {
+                        const leftFr = newLeftWidth / containerWidth;
+                        const rightFr = newRightWidth / containerWidth;
+
+                        container.style.gridTemplateColumns = `${leftFr}fr ${rightFr}fr`;
+                        updateHandlePosition();
+                    }
+                };
+
+                const mouseUpHandler = function() {
+                    document.body.classList.remove('resizing');
+                    document.removeEventListener('mousemove', mouseMoveHandler);
+                    document.removeEventListener('mouseup', mouseUpHandler);
+                };
+
+                document.addEventListener('mousemove', mouseMoveHandler);
+                document.addEventListener('mouseup', mouseUpHandler);
+            });
+        }
+
+        function startAutoRefresh() {
+            setInterval(loadDashboardData, 30000); // Refresh every 30 seconds
+        }
+
+        // Update timestamp
+        setInterval(function() {
+            const now = new Date();
+            document.getElementById('header-timestamp').textContent = now.toLocaleString() + ' UTC';
+        }, 1000);
+    </script>
+</body>
+</html>
